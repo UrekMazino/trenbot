@@ -47,9 +47,22 @@ CSV columns expected:
 ts,open,high,low,close,volume
 ```
 
+To fetch current public OKX candles:
+
+```powershell
+python -m okxtrendbot.cli fetch-candles --limit 300
+```
+
+To run one paper-mode signal step:
+
+```powershell
+python -m okxtrendbot.cli paper-step
+```
+
+`paper-step` saves the latest candles to CSV, evaluates the BTC trend model, and records the signal in the independent SQLite database. A `FLAT` signal is normal and means the trend model chose not to trade.
+
 ## Why Separate?
 
 The statarb validator needs two tickers and pair relationship metrics. Trend following needs one ticker and directional metrics. Mixing them too early would make performance attribution and risk control muddy.
 
 The future bridge should be portfolio-level only: shared risk limits can decide whether both bots are allowed to run, but their strategies should remain independent.
-

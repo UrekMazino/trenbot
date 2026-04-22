@@ -47,6 +47,9 @@ class BotConfig:
     timeframe: str
     db_path: Path
     log_path: Path
+    candle_limit: int
+    okx_base_url: str
+    request_timeout_seconds: float
     ema_fast: int
     ema_slow: int
     atr_period: int
@@ -76,6 +79,9 @@ def load_config(env_file: str | Path = ".env") -> BotConfig:
         timeframe=_env_str("TREND_BOT_TIMEFRAME", "1H"),
         db_path=Path(_env_str("TREND_BOT_DB_PATH", "data/okxtrendbot.sqlite")),
         log_path=Path(_env_str("TREND_BOT_LOG_PATH", "logs/okxtrendbot.log")),
+        candle_limit=_env_int("TREND_BOT_CANDLE_LIMIT", 300, minimum=10),
+        okx_base_url=_env_str("TREND_BOT_OKX_BASE_URL", "https://www.okx.com").rstrip("/"),
+        request_timeout_seconds=_env_float("TREND_BOT_REQUEST_TIMEOUT_SECONDS", 10.0, minimum=1.0),
         ema_fast=ema_fast,
         ema_slow=ema_slow,
         atr_period=_env_int("TREND_BOT_ATR_PERIOD", 14, minimum=2),
@@ -86,4 +92,3 @@ def load_config(env_file: str | Path = ".env") -> BotConfig:
         risk_per_trade_pct=_env_float("TREND_BOT_RISK_PER_TRADE_PCT", 0.25, minimum=0.0),
         max_notional_usdt=_env_float("TREND_BOT_MAX_NOTIONAL_USDT", 100.0, minimum=0.0),
     )
-

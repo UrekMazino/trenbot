@@ -6,5 +6,5 @@ __pycache__/
 .mypy_cache/
 data/*.sqlite
 data/*.sqlite-*
+data/*.csv
 logs/*.log
-
