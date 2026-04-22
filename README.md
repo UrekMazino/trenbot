@@ -59,7 +59,38 @@ To run one paper-mode signal step:
 python -m okxtrendbot.cli paper-step
 ```
 
-`paper-step` saves the latest candles to CSV, evaluates the BTC trend model, and records the signal in the independent SQLite database. A `FLAT` signal is normal and means the trend model chose not to trade.
+`paper-step` saves the latest candles to CSV, evaluates the BTC trend model, records the signal, and manages the paper lifecycle:
+
+- Opens a simulated position when there is a `LONG` or `SHORT` signal and no open position.
+- Holds and trails the ATR stop while the trend remains valid.
+- Closes on stop loss, opposite signal, or EMA trend invalidation.
+- Records closed paper trades with realized PnL.
+
+A `FLAT` signal is normal and means the trend model chose not to open a new trade.
+
+Inspect paper status:
+
+```powershell
+python -m okxtrendbot.cli paper-status
+```
+
+Reset paper positions/trades while preserving signal history:
+
+```powershell
+python -m okxtrendbot.cli paper-reset --yes
+```
+
+## Credentials
+
+No OKX API credentials are needed for the current paper lifecycle. It only uses public candle data and simulated orders.
+
+Use separate demo/live credentials later only when we intentionally add private account reads or actual order placement:
+
+```env
+OKX_API_KEY=
+OKX_API_SECRET=
+OKX_PASSPHRASE=
+```
 
 ## Why Separate?
 

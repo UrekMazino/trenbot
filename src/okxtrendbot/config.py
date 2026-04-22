@@ -57,6 +57,7 @@ class BotConfig:
     min_ema_gap_atr: float
     max_extension_atr: float
     stop_atr_mult: float
+    paper_equity_usdt: float
     risk_per_trade_pct: float
     max_notional_usdt: float
 
@@ -89,6 +90,7 @@ def load_config(env_file: str | Path = ".env") -> BotConfig:
         min_ema_gap_atr=_env_float("TREND_BOT_MIN_EMA_GAP_ATR", 0.20, minimum=0.0),
         max_extension_atr=_env_float("TREND_BOT_MAX_EXTENSION_ATR", 3.00, minimum=0.1),
         stop_atr_mult=_env_float("TREND_BOT_STOP_ATR_MULT", 2.50, minimum=0.1),
+        paper_equity_usdt=_env_float("TREND_BOT_PAPER_EQUITY_USDT", 1000.0, minimum=0.0),
         risk_per_trade_pct=_env_float("TREND_BOT_RISK_PER_TRADE_PCT", 0.25, minimum=0.0),
         max_notional_usdt=_env_float("TREND_BOT_MAX_NOTIONAL_USDT", 100.0, minimum=0.0),
     )
