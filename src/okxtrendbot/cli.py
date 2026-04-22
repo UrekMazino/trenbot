@@ -10,6 +10,7 @@ from .config import load_config
 from .models import PaperTradingConfig
 from .okx_market import OkxMarketDataClient
 from .paper import PaperTrader
+from .runtime import PaperRunOptions, PaperRuntime
 from .store import TrendStore
 from .strategy import QuantTrendStrategy, TrendStrategyParams
 
@@ -124,6 +125,21 @@ def cmd_paper_reset(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_paper_run(args: argparse.Namespace) -> int:
+    cfg = load_config()
+    options = PaperRunOptions(
+        interval_seconds=float(args.interval),
+        max_loops=int(args.max_loops or 0),
+        symbol=args.symbol,
+        timeframe=args.timeframe,
+        limit=args.limit,
+        output=args.output,
+    )
+    result = PaperRuntime(cfg, options).run()
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="okxtrendbot")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -159,6 +175,15 @@ def build_parser() -> argparse.ArgumentParser:
     paper_reset.add_argument("--all", action="store_true", help="Reset all paper symbols")
     paper_reset.add_argument("--yes", action="store_true", help="Confirm reset")
     paper_reset.set_defaults(func=cmd_paper_reset)
+
+    paper_run = sub.add_parser("paper-run", help="Run continuous paper trading loop")
+    paper_run.add_argument("--symbol", default=None, help="OKX instrument id, default from TREND_BOT_SYMBOL")
+    paper_run.add_argument("--timeframe", default=None, help="OKX candle bar, default from TREND_BOT_TIMEFRAME")
+    paper_run.add_argument("--limit", type=int, default=None, help="Candle limit, max 300 for OKX public candles")
+    paper_run.add_argument("--output", default=None, help="Optional candle CSV output path")
+    paper_run.add_argument("--interval", type=float, default=300.0, help="Seconds between paper steps")
+    paper_run.add_argument("--max-loops", type=int, default=0, help="Maximum loops before exit; 0 runs until stopped")
+    paper_run.set_defaults(func=cmd_paper_run)
     return parser
 
 

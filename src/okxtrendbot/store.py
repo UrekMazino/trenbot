@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .models import SignalSide, TrendSignal
+
+
+def utcnow_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class TrendStore:
@@ -41,6 +47,50 @@ class TrendStore:
                 """
                 CREATE INDEX IF NOT EXISTS ix_trend_signals_symbol_created
                 ON trend_signals(symbol, created_at)
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS runs (
+                    id TEXT PRIMARY KEY,
+                    run_key TEXT NOT NULL UNIQUE,
+                    mode TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    timeframe TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    ended_at TEXT,
+                    loop_count INTEGER NOT NULL DEFAULT 0,
+                    last_heartbeat_at TEXT,
+                    last_signal_id INTEGER,
+                    last_action TEXT,
+                    last_error TEXT
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE INDEX IF NOT EXISTS ix_runs_started_at
+                ON runs(started_at)
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS run_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id TEXT NOT NULL,
+                    ts TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    severity TEXT NOT NULL,
+                    message TEXT,
+                    payload_json TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE INDEX IF NOT EXISTS ix_run_events_run_ts
+                ON run_events(run_id, ts)
                 """
             )
             conn.execute(
@@ -130,6 +180,100 @@ class TrendStore:
                 ),
             )
             return int(cur.lastrowid)
+
+    def start_run(self, *, run_key: str, mode: str, symbol: str, timeframe: str) -> str:
+        self.init_db()
+        run_id = str(uuid.uuid4())
+        now = utcnow_iso()
+        with self.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO runs (
+                    id, run_key, mode, symbol, timeframe, status,
+                    started_at, last_heartbeat_at
+                )
+                VALUES (?, ?, ?, ?, ?, 'running', ?, ?)
+                """,
+                (run_id, run_key, mode, symbol, timeframe, now, now),
+            )
+        return run_id
+
+    def finish_run(self, run_id: str, *, status: str = "stopped", last_error: str | None = None) -> None:
+        self.init_db()
+        with self.connect() as conn:
+            conn.execute(
+                """
+                UPDATE runs
+                SET status = ?,
+                    ended_at = ?,
+                    last_error = COALESCE(?, last_error)
+                WHERE id = ?
+                """,
+                (status, utcnow_iso(), last_error, run_id),
+            )
+
+    def update_run_heartbeat(
+        self,
+        run_id: str,
+        *,
+        loop_count: int,
+        signal_id: int | None,
+        action: str | None,
+        last_error: str | None = None,
+    ) -> None:
+        self.init_db()
+        with self.connect() as conn:
+            conn.execute(
+                """
+                UPDATE runs
+                SET loop_count = ?,
+                    last_heartbeat_at = ?,
+                    last_signal_id = COALESCE(?, last_signal_id),
+                    last_action = COALESCE(?, last_action),
+                    last_error = ?
+                WHERE id = ?
+                """,
+                (loop_count, utcnow_iso(), signal_id, action, last_error, run_id),
+            )
+
+    def record_event(
+        self,
+        run_id: str,
+        *,
+        event_type: str,
+        message: str | None = None,
+        severity: str = "info",
+        payload: dict | None = None,
+    ) -> int:
+        self.init_db()
+        with self.connect() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO run_events (run_id, ts, event_type, severity, message, payload_json)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    utcnow_iso(),
+                    event_type,
+                    severity,
+                    message,
+                    json.dumps(payload or {}, sort_keys=True),
+                ),
+            )
+            return int(cur.lastrowid)
+
+    def latest_run(self) -> dict[str, object] | None:
+        self.init_db()
+        with self.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM runs
+                ORDER BY started_at DESC
+                LIMIT 1
+                """
+            ).fetchone()
+        return _row_to_dict(row)
 
     def get_open_position(self, symbol: str) -> dict[str, object] | None:
         self.init_db()

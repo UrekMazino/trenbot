@@ -47,6 +47,9 @@ class BotConfig:
     timeframe: str
     db_path: Path
     log_path: Path
+    state_path: Path
+    log_max_bytes: int
+    log_backups: int
     candle_limit: int
     okx_base_url: str
     request_timeout_seconds: float
@@ -80,6 +83,9 @@ def load_config(env_file: str | Path = ".env") -> BotConfig:
         timeframe=_env_str("TREND_BOT_TIMEFRAME", "1H"),
         db_path=Path(_env_str("TREND_BOT_DB_PATH", "data/okxtrendbot.sqlite")),
         log_path=Path(_env_str("TREND_BOT_LOG_PATH", "logs/okxtrendbot.log")),
+        state_path=Path(_env_str("TREND_BOT_STATE_PATH", "data/runtime_state.json")),
+        log_max_bytes=_env_int("TREND_BOT_LOG_MAX_BYTES", 1_048_576, minimum=1024),
+        log_backups=_env_int("TREND_BOT_LOG_BACKUPS", 3, minimum=0),
         candle_limit=_env_int("TREND_BOT_CANDLE_LIMIT", 300, minimum=10),
         okx_base_url=_env_str("TREND_BOT_OKX_BASE_URL", "https://www.okx.com").rstrip("/"),
         request_timeout_seconds=_env_float("TREND_BOT_REQUEST_TIMEOUT_SECONDS", 10.0, minimum=1.0),

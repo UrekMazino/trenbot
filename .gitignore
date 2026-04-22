@@ -7,4 +7,6 @@ __pycache__/
 data/*.sqlite
 data/*.sqlite-*
 data/*.csv
+data/runtime_state.json
 logs/*.log
+logs/*.log.*

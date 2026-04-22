@@ -80,6 +80,20 @@ Reset paper positions/trades while preserving signal history:
 python -m okxtrendbot.cli paper-reset --yes
 ```
 
+Run the continuous paper bot:
+
+```powershell
+python -m okxtrendbot.cli paper-run --interval 300
+```
+
+For a bounded smoke test:
+
+```powershell
+python -m okxtrendbot.cli paper-run --interval 1 --max-loops 2
+```
+
+`paper-run` writes rotating logs to `logs/okxtrendbot.log`, updates `data/runtime_state.json`, and records `runs` plus `run_events` in the independent SQLite database.
+
 ## Credentials
 
 No OKX API credentials are needed for the current paper lifecycle. It only uses public candle data and simulated orders.
