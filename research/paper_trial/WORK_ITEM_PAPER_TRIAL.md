@@ -37,4 +37,16 @@ Implementation: a guarded wrapper (`paper_step_guarded.py`) runs each step, then
 
 ---
 
-*Paper-trial work item v1.0, 2026-06-12. Locked before the first step. Scheduling: every 4H at UTC bar close +2 min. The gated configuration papers unchanged; the kill-switches are operational armor, not tuning.*
+## AMENDMENT v1.1 (2026-06-13, operator-ratified: "adjust the program to continue where last left off") — catch-up stepping
+
+**Problem found:** machine-off gaps interacted badly with mitigation #5 — the fidelity replay compares paper trades against the engine *which sees all bars*, so an entry missed purely because the machine was off would register as a spurious FIDELITY-MISMATCH and trip the kill. Gaps punished the power button, not the pipeline.
+
+**Change:** the guarded wrapper becomes a **catch-up stepper**. It tracks the last evaluated bar (`last_bar.json`), and on every run fetches history from the public endpoint and processes **every unprocessed completed bar in chronological order** through the bot's own classes (`QuantTrendStrategy.evaluate` → `record_signal` → `PaperTrader.apply_signal` — the exact `paper-step` sequence, one invocation per bar). A normal run processes exactly 1 new bar; a run after downtime processes N. Idempotent (bars ≤ last processed are skipped); no lookahead (each bar's decision uses only data through that bar).
+
+**Why this is lock-consistent:** the trial's locked PRIMARY question is fidelity to the engine on the same candles; catch-up makes the paper path and engine path see identical bars, so replay mismatches are meaningful again. Strategy logic, parameters, sizing: untouched (the foreclosure list stands). Mitigation semantics updated: stale-data flag now means *the data source* is behind (genuine anomaly), not the machine; the uptime metric continues to record gaps (`caught_up=N` flags) for the review.
+
+**Honest caveat carried to the review:** catch-up fills at historical bar prices are a paper-only luxury — a future LIVE deployment cannot catch up reality (a stop hit during downtime is eaten at the post-gap price, entries are simply missed). Trial results therefore assume high availability; the live-decision gate, if ever written, must address deployment availability explicitly.
+
+---
+
+*Paper-trial work item v1.0, 2026-06-12 (locked before the first step) + amendment v1.1, 2026-06-13 (catch-up stepping, before any trade existed). Scheduling: every 4H at UTC bar close +2 min. The gated configuration papers unchanged; the kill-switches are operational armor, not tuning.*
