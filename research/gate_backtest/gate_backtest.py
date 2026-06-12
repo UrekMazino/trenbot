@@ -87,8 +87,14 @@ def load_candles() -> list[dict]:
 
 
 def simulate(bars: list[dict], params: TrendStrategyParams,
-             fill_at_signal_close: bool = False) -> dict:
-    """One full simulation. Returns trades + equity curve + metrics."""
+             fill_at_signal_close: bool = False, bar_hours: float = 1.0) -> dict:
+    """One full simulation. Returns trades + equity curve + metrics.
+
+    bar_hours: real hours per bar (1.0 for 1H, 4.0 for 4H, 24.0 for 1D) —
+    per WORK_ITEM_MTF_GATE.md this is a unit-handling extension only:
+    funding is charged on real hours held and Sharpe annualizes by actual
+    periods/year. 1H results are unchanged at the default.
+    """
     strat = QuantTrendStrategy(params)
     candle_objs = [Candle(ts=str(b["ts"]), open=b["open"], high=b["high"],
                           low=b["low"], close=b["close"], volume=b["volume"])
@@ -104,7 +110,7 @@ def simulate(bars: list[dict], params: TrendStrategyParams,
         nonlocal pos, eq
         sgn = 1.0 if pos["side"] == "long" else -1.0
         gross = sgn * (px - pos["entry_px"]) / pos["entry_px"] * NOTIONAL
-        hold_h = i - pos["entry_i"]
+        hold_h = (i - pos["entry_i"]) * bar_hours
         cost = 2 * FEE_SLIP_PER_SIDE * NOTIONAL + FUNDING_PER_8H * NOTIONAL * (hold_h / 8)
         net = gross - cost
         eq += net
@@ -181,7 +187,7 @@ def simulate(bars: list[dict], params: TrendStrategyParams,
 
     eq_arr = np.array(equity)
     rets = np.diff(eq_arr) / eq_arr[:-1]
-    sharpe = float(rets.mean() / rets.std() * np.sqrt(24 * 365)) if rets.std() > 0 else 0.0
+    sharpe = float(rets.mean() / rets.std() * np.sqrt(8760 / bar_hours)) if rets.std() > 0 else 0.0
     peak = np.maximum.accumulate(eq_arr)
     mdd = float(((peak - eq_arr) / peak).max())
     net = sum(t["net"] for t in trades)
