@@ -10,3 +10,4 @@ data/*.csv
 data/runtime_state.json
 logs/*.log
 logs/*.log.*
+research/gate_backtest/data/
