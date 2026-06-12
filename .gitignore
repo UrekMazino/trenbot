@@ -11,3 +11,8 @@ data/runtime_state.json
 logs/*.log
 logs/*.log.*
 research/gate_backtest/data/
+research/paper_trial/trial_status.csv
+research/paper_trial/scheduler.log
+research/paper_trial/KILL_SWITCH.txt
+data/BTC-USDT-SWAP-4H.csv
+.env
